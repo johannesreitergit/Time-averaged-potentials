@@ -7,12 +7,8 @@ from scipy import signal
 from scipy.special import eval_hermite
 import matplotlib
 
-#s et plot parameters and fonts
+#set plot parameters and fonts
 matplotlib.rcParams['text.usetex'] = True
-# matplotlib.rcParams['pdf.fonttype'] = 42
-# matplotlib.rcParams['ps.fonttype'] = 42
-# matplotlib.rcParams['mathtext.fontset'] = 'stix'
-# matplotlib.rcParams['font.family'] = 'STIXGeneral'
 plt.rcParams["font.family"]='serif'
 
 
@@ -68,7 +64,7 @@ def find_ES_index(psi0, f_energies, f_modes_0):
     overlap[state,0] = np.abs(psi0.overlap(f_modes_0[state]))**2 # calculate overlap of Floquet mode and initial wavefunction
   overlap[:,1] = f_energies
   ind = overlap[:,0].argsort()         # return index to sort for largest overlap
-  index = ind[::-1][1]                 # reverse index array to account for bottom to top sorting, extract ground state
+  index = ind[::-1][1]                 # reverse index array to account for bottom to top sorting, extract first excited state
   return index                         # return index
 
 #effective trap frequency for different duty cycles
@@ -86,12 +82,12 @@ def ho_state(n,x, w=10000):
 N = 170                 # number of levels in the Hilbert space
 hbar = 1
 m = 1
-w = 2 * np.pi * 10000   # trap frequency (Hz)
+w = 2 * np.pi * 29500   # trap frequency (Hz)
 a = destroy(N)          # annihilation operator
 
 # Time constants
 duty = 0.2				# duty cycle
-f = 200e3                # switch function frequency in Hz
+f = 500e3                # switch function frequency in Hz
 Omega = 2*np.pi*f 
 T = 1/f                 # switch period
 
@@ -101,7 +97,7 @@ args = {'duty': duty, 'Omega': Omega}
 
 # calculate matrix-like harmonic oscillator states where each column represents an ho eigenstate (i.e. N) and each row a position in space 
 ho_states = np.array([])
-x = np.linspace(-0.03,0.03,256)
+x = np.linspace(-0.01,0.01,256)
 for n in range(N):
   ho_states = np.append(ho_states, ho_state(n, x, w))
 ho_states = ho_states.reshape(N,len(x)) # reshape to have matrix form
@@ -125,15 +121,22 @@ power = abs(ho_state(0,x,w=w_eff))**2
 
 #plot
 fig, ax = plt.subplots(figsize=(10,8))
-plt.tick_params(axis='both', which='major', labelsize=15)
+plt.tick_params(axis='both', which='major', labelsize=30, direction='in', bottom=True, top=True, left=True, right=True, length=5)
 title = 'Floquet ground state for $\Omega=${0}kHz and $D=${1}'
-plt.title(title.format(args['Omega']/(2*np.pi*1e3), args['duty']), fontsize = 20)
-plt.xlabel('x', fontsize=20)
-plt.ylabel('$|\Psi|^2$', fontsize=20)
-plt.plot(x, gstate, '.', label='Numerical $\Psi_{0,Floquet}$')
-plt.plot(x, ho_gstate, label='Harmonic oscillator ground state',color='green' )
-plt.plot(x, power, label='Harmonic oscillator with $\omega_{eff} = \omega_{trap}\cdot\sqrt{D}$', color='red')
-plt.legend(loc='best',fontsize=10)
+# plt.subplots_adjust(left=0.06, bottom=0.09, right=0.56, top=0.97,wspace=0.2, hspace=0.2)
+# plt.title(title.format(args['Omega']/(2*np.pi*1e3), args['duty']), fontsize = 20)
+plt.xlabel('position x [a.u.]', fontsize=40)
+plt.ylabel('density $|\Psi|^2$', fontsize=40)
+plt.plot(x*1000, ho_gstate, label='$\Psi_{HO,0}$',color='green' )
+plt.plot(x*1000, power, label='$\Psi_{HO,0}$ with $\omega_{eff} = \omega_{trap}\cdot\sqrt{D}$', color='red')
+plt.plot(x[::2]*1000, gstate[::2], '.', label='Numerical $\Psi_{0,Floquet}$')
+plt.ylim(-5,250)
+# plt.legend(loc='best',fontsize=25, bbox_to_anchor=(1.05,1))
+# plt.savefig('Floquet_groundstate_space.pdf', format='pdf')
 # plt.grid()
+plt.plot()
+# plt.figure(figsize=(10,8))
+# plt.plot(x*1000, gstate-abs(ho_state(0,x,w=w_eff))**2, '.')
+
 
 plt.show()

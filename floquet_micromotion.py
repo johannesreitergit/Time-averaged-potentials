@@ -7,7 +7,7 @@ from scipy import signal
 from scipy.special import eval_hermite
 import matplotlib
 
-#s et plot parameters and fonts
+#set plot parameters and fonts
 matplotlib.rcParams['text.usetex'] = True
 plt.rcParams["font.family"]='serif'
 
@@ -72,21 +72,21 @@ def w_eff_duty(x):
   return w*np.sqrt(x)
 
 # returns the Harmonic oscillator wavefunction for state n
-def ho_state(n,x, w=10000):
-  return  1/np.sqrt(2**float(n)*np.math.factorial(float(n)))*(m*w/(np.pi*hbar))**0.25*np.exp(-(m*w*x**2)/(2*hbar))*eval_hermite(np.array([n]),np.sqrt(m*w/hbar)*x)
+def ho_state(n,x, w=10000, offset=0):
+  return  1/np.sqrt(2**float(n)*np.math.factorial(float(n)))*(m*w/(np.pi*hbar))**0.25*np.exp(-(m*w*(x-offset)**2)/(2*hbar))*eval_hermite(np.array([n]),np.sqrt(m*w/hbar)*(x-offset))
 
 #_____________________________________________________________________________________________________________________________________________________
 
 #constants
-N = 16                 # number of levels in the Hilbert space
+N = 64                 # number of levels in the Hilbert space
 hbar = 1
 m = 1
-w = 2 * np.pi * 10000   # trap frequency (Hz)
+w = 2 * np.pi * 29450   # trap frequency (Hz)
 a = destroy(N)          # annihilation operator
 
 # Time constants
 duty = 0.2        # duty cycle
-f = 200e3                # switch function frequency in Hz
+f = 500e3                # switch function frequency in Hz
 Omega = 2*np.pi*f 
 T = 1/f                 # switch period
 t_start = 0             # start time
@@ -105,6 +105,7 @@ H = [H0,[H1, H1coeff]]                                         # full time-depen
 
 # Calculate Floquet modes and energies at t = 0
 f_modes_0, f_energies = floquet_modes(H, T, args, sort=True)
+f_coeff = floquet_state_decomposition(f_modes_0, f_energies, psi0)
 
 #find groundstate index |0>
 indexGS = find_GS_index(psi0, f_energies, f_modes_0)
@@ -128,55 +129,96 @@ for t in range(len(time)):
   overlap_estate = np.append(overlap_estate,ovlp)
 
 
+# HO STATES 
+# calculate matrix-like harmonic oscillator states where each column represents an ho eigenstate (i.e. N) and each row a position in space 
+ho_states = np.array([])
+x = np.linspace(-0.01,0.01,512)
+for n in range(N):
+  ho_states = np.append(ho_states, ho_state(n, x, w))
+ho_states = ho_states.reshape(N,len(x)) # reshape to have matrix form
+
 # PHASE
 # create figure and axis objects with subplots()
-fig,ax = plt.subplots(figsize=(10,10))
-ax.tick_params(axis='both', which='major', labelsize=15)
+fig,ax = plt.subplots(figsize=(11,10))
+ax.tick_params(axis='both', which='major', labelsize=25)
 
 # HO on
-ax.set_title('Micromotion of the Floquet ground state', fontsize=20)
+# ax.set_title('Micromotion of the Floquet ground state', fontsize=20)
 ax.plot(time/T, onoff(time, args['duty'], args['Omega']), label='Harmonic potential ON', color='orange', alpha=0.30)
 ax.fill_between(time/T, np.zeros(len(time)),onoff(time, args['duty'], args['Omega']), color='orange', alpha=0.30)
 
-ax.tick_params(axis='both', which='major', labelsize=15)
+ax.tick_params(axis='both', which='major', labelsize=25, direction='in', bottom=True, top=True, left=True, right=True, length=5)
 ax.plot(time/T, np.angle(overlap_gstate, deg=True)/360, label=r'phase angle of $\Psi_{0, Floquet}(t)$', color='green')
 ax.set_ylabel('Phase $\Phi / 2\pi$', fontsize=20)
 ax.plot(time/T, np.angle(np.exp(1j*time*f_energies[indexGS]), deg=True)/360, linestyle='-', label=r'$\Phi=arg(\exp(-i \epsilon_0 t))$') # observe: no minus sign in exponent due to -pi/pi convention
 ax.set_ylim(min(np.angle(overlap_gstate, deg=True)/360), max(np.angle(overlap_gstate, deg=True)/360))
-ax.legend(loc=7, fontsize=15)
-ax.set_xlabel('time / T', fontsize=20)
-plt.grid()
+ax.legend(loc=7, fontsize=25)
+ax.set_xlabel('time / T', fontsize=25)
+# plt.grid()
 
 
 # DENSITY
 # create figure and axis objects with subplots()
-fig,ax = plt.subplots(figsize=(10,10))
-ax.tick_params(axis='both', which='major', labelsize=15)
-
+fig, ax = plt.subplots(2,1, gridspec_kw={'height_ratios':[1,4]}, figsize=(13,10)) 
+ax[1].tick_params(axis='both', which='major', labelsize=25, direction='in', bottom=True, top=True, left=True, right=False, length=5)
+plt.subplots_adjust(right=0.87)
 # HO on
-ax.set_title('Micromotion of the Floquet ground state', fontsize=20)
-p0 = ax.plot(time/T, onoff(time, args['duty'], args['Omega']), color='orange', alpha=0.30,  label='Harmonic potential ON')
-ax.fill_between(time/T, np.zeros(len(time)),onoff(time, args['duty'], args['Omega']), color='orange', alpha=0.30)
+# ax.set_title('Micromotion of the Floquet ground state', fontsize=20)
+p0 = ax[1].plot(time/T, onoff(time, args['duty'], args['Omega']), color='orange', alpha=0.30,  label='Harmonic potential ON')
+ax[1].fill_between(time/T, np.zeros(len(time)),onoff(time, args['duty'], args['Omega']), color='orange', alpha=0.30)
 
 # micromotion |0>
-p1 = ax.plot(time/T, abs(overlap_gstate)**2, label=r'$|0\rangle$', color='darkblue')
-ax.set_ylim(0.995,1.0001)
-ax.set_ylabel(r'$| \langle \Psi_{0, Floquet}(t) | \Psi_{0, Floquet}(0) \rangle |^2 $', fontsize=20)
-ax.set_xlabel('time / T', fontsize=20)
-ax.set_xlim(0,1)
+p1 = ax[1].plot(time/T, abs(overlap_gstate)**2, label=r'$|0\rangle$') #, color='darkblue'
+ax[1].set_ylim(0.995,1.0001)
+ax[1].set_ylabel(r'$| \langle \Psi_{0, Floquet}(t) | \Psi_{0, Floquet}(0) \rangle |^2 $', fontsize=25)
+ax[1].set_xlabel('time / T', fontsize=25)
+ax[1].set_xlim(0,1)
 
 # micromotion |2>
-ax2=ax.twinx()
-ax2.tick_params(axis='both', which='major', labelsize=15)
+ax2=ax[1].twinx()
+ax2.tick_params(axis='both', which='major', labelsize=25, direction='in', bottom=True, top=True, left=False, right=True, length=5)
 p2 = ax2.plot(time/T, abs(overlap_estate)**2, label=r'$|2\rangle$', color='darkred')
 ax2.set_ylim(-0.0001,0.005)
-ax2.set_ylabel(r'$| \langle \Psi_{2, Floquet}(t) | \Psi_{0, Floquet}(0) \rangle |^2 $', fontsize=20)
+ax2.set_ylabel(r'$| \langle \Psi_{2, Floquet}(t) | \Psi_{0, Floquet}(0) \rangle |^2 $', fontsize=25)
 
 # legend
 plots = p0 + p1 + p2
 labs = [l.get_label() for l in plots]
 
-ax.legend(plots, labs, loc=7, fontsize=15)
-ax.grid()
+ax[1].legend(plots, labs, loc=7, fontsize=25)
+
+
+# small little wave packets
+x1 = np.linspace(0.4,0.6,300)
+state1 = ho_state(0,x1,3000, offset=0.5)
+expected = ho_state(0,x1,5000, offset=0.5)
+
+
+x2 = np.linspace(0.0,0.2,300)
+state2 = ho_state(0,x2,5000, offset=0.1)
+
+
+x3 = np.linspace(0.8,1,300)
+state3 = ho_state(0,x3,5000, offset=0.9)
+
+
+ax[0].plot(x1, state1, color='darkblue')
+ax[0].plot(x2, state2, color='darkblue')
+ax[0].plot(x3, state3, color='darkblue')
+ax[0].plot(x2, state2, color='grey', linestyle='dashed')
+ax[0].plot(x3, state3, color='grey', linestyle='dashed')
+ax[0].plot(x1, expected, color='grey', linestyle='dashed')
+ax[0].arrow(0.2,4, 0.18,0, color='black', head_width=0.7, head_length=0.02)
+ax[0].arrow(0.6,4, 0.18,0, color='black', head_width=0.7, head_length=0.02)
+
+ax[0].set_xlim(0,1)
+ax[0].set_ylim(0,8)
+ax[0].set_xticks([])
+ax[0].set_yticks([])
+ax[0].axis('off')
+
+plt.savefig('micromotion_density.pdf', format='pdf')
+
+
 
 plt.show()

@@ -6,12 +6,8 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import matplotlib
 
-#s et plot parameters and fonts
+#et plot parameters and fonts
 matplotlib.rcParams['text.usetex'] = True
-# matplotlib.rcParams['pdf.fonttype'] = 42
-# matplotlib.rcParams['ps.fonttype'] = 42
-# matplotlib.rcParams['mathtext.fontset'] = 'stix'
-# matplotlib.rcParams['font.family'] = 'STIXGeneral'
 plt.rcParams["font.family"]='serif'
 
 #periodic switch function
@@ -60,13 +56,13 @@ def time_averaged_energy(quasienergies, Omegas):
 #_____________________________________________________________________________________________________________________________________________________
 
 # constants
-N = 32                           # number of levels in the Hilbert space
+N = 128                           # number of levels in the Hilbert space
 hbar = 1
-w = 2*np.pi* 10000                # HO trap frequency
+w = 2*np.pi* 29500                # HO trap frequency
 
 
 # Time constants
-f = 200e3                           # switch function frequency in Hz
+f = 500e3                           # switch function frequency in Hz
 Omega = 2*np.pi*f
 T = 1/f                           # switch period
 
@@ -81,25 +77,32 @@ H1 = -w/4.*(a.dag()*a.dag() + a*a + 2*a.dag()*a + 1)*qeye(N)   # time-dependent 
 H = [H0,[H1, H1coeff]]                                         # full time-dependant Hamiltonian
 
 #sweep through different duty cycles
-duty = np.linspace(0,1,100)
+duty = np.linspace(0,1,50)
 duty_energies = np.array([])
 
 for d in duty:
-  args={'duty':d, 'Omega': Omega}
+  args={'duty':d, 'Omega':Omega}
   f_modes_0, f_energies = floquet_modes(H, T, args ,sort=True) # Calculate Floquet modes and energies at t = 0
   
   energies = energy_sorter(psi0, f_energies,f_modes_0)         # sort quasienergies
   duty_energies = np.append(duty_energies, energies[0])        # quasienergies for the duty cycle
 
+dc = np.linspace(0,1,300)
 # plot
 fig = plt.figure(figsize=(10,8))
-plt.tick_params(axis='both', which='major', labelsize=15)
-plt.plot(duty, duty_energies*2/w,'.', label='numerical quasienergies', color='darkblue')
-plt.plot(duty, w_eff_duty(duty)/w, label='$\omega_{eff}=\omega_{trap} \sqrt{D}$', color='red', alpha=0.5)
-plt.title('Quasienergies for different duty cycles $D$', fontsize=20)
-plt.xlabel('Duty cycle D', fontsize=20)
+plt.tick_params(axis='both', which='major', labelsize=20, direction='in', bottom=True, top=True, left=True, right=True, length=5)
+plt.plot(dc, w_eff_duty(dc)/w, label='$\omega_{eff}=\omega_{trap} \sqrt{D}$', color='red', alpha=1)
+plt.plot(duty, duty_energies*2/w,'.', label='numerical quasi-energies')#, color='blue'
+# plt.title('Quasienergies for different duty cycles $D$', fontsize=20)
+plt.xlabel('duty cycle D', fontsize=20)
 plt.ylabel('$\epsilon_{0, Floquet}/\epsilon_{0,HO}$', fontsize=20)
-plt.grid()
-plt.legend(fontsize=15)
+plt.grid(alpha=0.6)
+plt.legend(fontsize=20)
+
+plt.savefig('quasienergies_duty_cycle.pdf', format='pdf')
+
+plt.figure(figsize=(10,8))
+plt.plot(duty, (w_eff_duty(duty)/w - duty_energies*2/w )/w_eff_duty(duty)/w, '.')
+
 
 plt.show()

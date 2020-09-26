@@ -6,12 +6,8 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import matplotlib
 
-#s et plot parameters and fonts
+#set plot parameters and fonts
 matplotlib.rcParams['text.usetex'] = True
-# matplotlib.rcParams['pdf.fonttype'] = 42
-# matplotlib.rcParams['ps.fonttype'] = 42
-# matplotlib.rcParams['mathtext.fontset'] = 'stix'
-# matplotlib.rcParams['font.family'] = 'STIXGeneral'
 plt.rcParams["font.family"]='serif'
 
 #periodic switch function
